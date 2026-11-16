@@ -265,7 +265,6 @@
             deposits: JSON.parse(localStorage.getItem('zentra_v6_deposits')) || [],
             withdrawals: JSON.parse(localStorage.getItem('zentra_v6_withdrawals')) || []
         };
-
         // CALCULAR SALDO RETIRABLE (SOLO GANANCIAS POR TAREAS)
         function getWithdrawableBalance(user) {
             if (!user) return 0;
@@ -524,13 +523,10 @@
             };
             reader.readAsDataURL(file);
         }
-
         let isSubmittingDeposit = false;
-
         async function handleDepositSubmit(e) {
             e.preventDefault();
             if (isSubmittingDeposit) return;
-
             const amount = parseFloat(document.getElementById('deposit-amount').value);
             if (isNaN(amount) || amount < 15) return showToast(t('min_deposit_err'), false);
             if (!AppState.selectedFile) return showToast(AppState.lang === 'es' ? 'Adjunta la foto del comprobante.' : 'Please attach the receipt screenshot.', false);
@@ -540,7 +536,6 @@
             if (submitBtn) {
                 submitBtn.disabled = true;
             }
-
             try {
                 let receiptUrl = '#';
                 if (supabaseClient) {
@@ -596,13 +591,11 @@
             const address = document.getElementById('withdraw-address').value.trim();
             const amount = parseFloat(document.getElementById('withdraw-amount').value);
             const withdrawableBal = getWithdrawableBalance(AppState.currentUser);
-
             if (!address) return showToast(AppState.lang === 'es' ? 'Ingresa una dirección válida.' : 'Enter a valid address.', false);
             if (amount < 5) return showToast(t('min_withdraw_err'), false);
             if (amount > withdrawableBal) {
                 return showToast(AppState.lang === 'es' ? 'Solo puedes retirar el saldo ganado con tareas.' : 'You can only withdraw earnings from tasks.', false);
             }
-
             AppState.currentUser.balance = Math.max(0, AppState.currentUser.balance - amount);
             AppState.currentUser.taskBalance = Math.max(0, withdrawableBal - amount);
             AppState.withdrawals.unshift({
@@ -663,6 +656,42 @@
             persistState();
             render();
         }
+
+        // FUNCIONES DE ELIMINACIÓN (ADMIN)
+        async function eliminarUsuario(userId) {
+            const userToDelete = AppState.users.find(u => u.id === userId);
+            if (userToDelete && userToDelete.role === 'admin') {
+                return showToast("No se puede eliminar al administrador principal.", false);
+            }
+            if (!confirm("¿Estás seguro de que deseas eliminar este usuario?")) return;
+            if (supabaseClient && userToDelete) {
+                try {
+                    await supabaseClient.from('profiles').delete().eq('email', userToDelete.email);
+                } catch (e) {
+                    console.error("Error al eliminar en Supabase:", e);
+                }
+            }
+            AppState.users = AppState.users.filter(u => u.id !== userId);
+            persistState();
+            showToast("Usuario eliminado correctamente.");
+            render();
+        }
+
+        async function eliminarCapture(depId) {
+            if (!confirm("¿Deseas eliminar este registro de recarga y su comprobante?")) return;
+            if (supabaseClient) {
+                try {
+                    await supabaseClient.from('deposits').delete().eq('id', depId);
+                } catch (e) {
+                    console.error("Error al eliminar recarga en Supabase:", e);
+                }
+            }
+            AppState.deposits = AppState.deposits.filter(d => d.id !== depId);
+            persistState();
+            showToast("Registro de capture eliminado con éxito.");
+            render();
+        }
+
         function openReceiptModal(imgSrc) {
             document.getElementById('receipt-modal-img').src = imgSrc;
             document.getElementById('receipt-modal').classList.remove('hidden');
@@ -968,7 +997,10 @@
                                     </div>
                                     <div class="flex items-center justify-between pt-2 border-t border-slate-100">
                                         <button onclick="openReceiptModal('${dep.receipt}')" class="text-indigo-600 font-extrabold text-[11px] underline"><i class="fa-solid fa-image mr-1"></i> Ver Comprobante Supabase</button>
-                                        <span class="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">Sincronizado Online</span>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="eliminarCapture(${dep.id})" class="bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold text-[10px]">Eliminar</button>
+                                            <span class="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">Sincronizado Online</span>
+                                        </div>
                                     </div>
                                 </div>
                             `).join('')}
@@ -1006,6 +1038,7 @@
                                             <input type="number" id="admin-bal-input-${u.id}" placeholder="Monto" class="bg-white border border-slate-300 rounded-xl p-1.5 text-xs text-slate-800 w-24 outline-none">
                                             <button onclick="adminUpdateBalance(${u.id}, 'add')" class="bg-indigo-600 text-white px-2.5 py-1 rounded-xl font-bold text-[11px]">+ Sumar</button>
                                             <button onclick="adminUpdateBalance(${u.id}, 'sub')" class="bg-rose-600 text-white px-2.5 py-1 rounded-xl font-bold text-[11px]">- Restar</button>
+                                            ${u.role !== 'admin' ? `<button onclick="eliminarUsuario(${u.id})" class="bg-rose-500 text-white px-2.5 py-1 rounded-xl font-bold text-[11px] ml-auto"><i class="fa-solid fa-trash"></i> Eliminar</button>` : ''}
                                         </div>
                                         <div class="flex items-center gap-2 pt-1">
                                             <span class="text-[10px] text-slate-500 font-bold">Cambiar VIP:</span>
