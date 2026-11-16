@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zentra VIP - Plataforma</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zentra: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#1e1b4b',
+                            950: '#0b0a1a'
+                        }
+                    },
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .glass-panel { background: rgba(248, 250, 252, 0.9); backdrop-filter: blur(12px); }
+        /* Ocultar insignia flotante de Netlify */
+        iframe[src*="netlify"], a[href*="netlify.com"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-800 w-screen h-screen flex justify-center items-center p-0 m-0 overflow-hidden">
+    <!-- MARCO CONTENEDOR AJUSTADO A PANTALLA COMPLETA SIN SCROLL -->
+    <div id="app" class="w-full h-full max-w-full max-h-full sm:max-w-md sm:h-[860px] sm:rounded-3xl bg-slate-50 flex flex-col relative shadow-xl border-0 sm:border border-slate-200 overflow-hidden">
+        
+        <!-- CABECERA PRINCIPAL -->
+        <header class="w-full bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex justify-between items-center z-30 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white rounded-xl flex items-center justify-center font-black text-base shadow-md shadow-indigo-500/20">Z</div>
+                <div>
+                    <span class="font-black text-slate-900 tracking-wider text-xs block leading-none">ZENTRA</span>
+                    <span class="text-[8px] font-bold text-indigo-600 uppercase tracking-widest">VIP PLATFORM</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- SELECTOR DE IDIOMA (ESPAÑOL / INGLÉS) -->
+                <button onclick="toggleLanguage()" class="text-[10px] font-black bg-slate-100 text-indigo-600 border border-slate-200 px-2 py-1 rounded-xl flex items-center gap-1 hover:bg-indigo-50 transition" title="Cambiar Idioma">
+                    <i class="fa-solid fa-globe text-[11px]"></i>
+                    <span id="lang-indicator">ES</span>
+                </button>
+                <div id="header-user-info" class="hidden flex items-center gap-1.5">
+                    <span id="badge-vip" class="text-[10px] font-extrabold bg-amber-500/10 text-amber-600 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <i class="fa-solid fa-crown text-[9px]"></i> <span id="badge-vip-text">VIP 0</span>
+                    </span>
+                    
+                    <!-- BOTÓN PANEL ADMIN (SOLO VISIBLE SI ES ADMINISTRADOR) -->
+                    <button id="admin-header-btn" onclick="switchTab('admin')" class="hidden text-amber-600 hover:text-amber-700 bg-amber-500/10 border border-amber-500/30 text-[10px] px-2 py-0.5 rounded-xl transition font-extrabold" title="Panel Administrador">
+                        <i class="fa-solid fa-user-shield mr-1"></i> Admin
+                    </button>
+                    <button onclick="logout()" class="text-slate-400 hover:text-rose-500 text-xs p-1 transition" title="Cerrar sesión">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        <!-- NOTIFICACIONES TOAST -->
+        <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-xs transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
+            <div id="toast-bg" class="bg-white border border-slate-200 text-slate-800 text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center justify-between gap-2">
+                <span id="toast-message">Notificación</span>
+                <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+            </div>
+        </div>
+        <!-- CONTENIDO DINÁMICO -->
+        <main id="main-content" class="flex-1 w-full p-4 overflow-y-auto hide-scrollbar">
+            <!-- Inyección dinámica con JavaScript -->
+        </main>
+        <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+        <nav id="bottom-navbar" class="w-full bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-2 flex justify-around items-center z-40 shrink-0 hidden">
+            <button onclick="switchTab('dashboard')" class="nav-tab text-indigo-600 flex flex-col items-center py-1 flex-1" data-tab="dashboard">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[10px] font-bold mt-0.5" data-i18n="nav_home">Inicio</span>
+            </button>
+            <button onclick="switchTab('vip')" class="nav-tab text-slate-400 flex flex-col items-center py-1 flex-1" data-tab="vip">
+                <i class="fa-solid fa-crown text-base"></i>
+                <span class="text-[10px] font-bold mt-0.5" data-i18n="nav_vip">VIP</span>
+            </button>
+            <button onclick="switchTab('tasks')" class="nav-tab text-slate-400 flex flex-col items-center py-1 flex-1" data-tab="tasks">
+                <i class="fa-solid fa-list-check text-base"></i>
+                <span class="text-[10px] font-bold mt-0.5" data-i18n="nav_tasks">Tareas</span>
+            </button>
+            <button onclick="switchTab('wallet')" class="nav-tab text-slate-400 flex flex-col items-center py-1 flex-1" data-tab="wallet">
+                <i class="fa-solid fa-wallet text-base"></i>
+                <span class="text-[10px] font-bold mt-0.5" data-i18n="nav_wallet">Billetera</span>
+            </button>
+            <button onclick="switchTab('referral')" class="nav-tab text-slate-400 flex flex-col items-center py-1 flex-1" data-tab="referral">
+                <i class="fa-solid fa-users text-base"></i>
+                <span class="text-[10px] font-bold mt-0.5" data-i18n="nav_team">Equipo</span>
+            </button>
+        </nav>
+        <!-- MODAL SIMULADOR TAREAS -->
+        <div id="sim-modal" class="absolute inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden flex items-center justify-center p-5">
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 w-full text-center shadow-2xl space-y-4">
+                <div class="w-14 h-14 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                    <i id="sim-app-icon" class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+                <div>
+                    <h3 id="sim-app-title" class="text-sm font-extrabold text-slate-900">Procesando Tarea</h3>
+                    <p id="sim-status-text" class="text-xs text-slate-500 mt-1">Conectando con el servidor...</p>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-200">
+                    <div id="sim-progress-bar" class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between items-center text-xs text-slate-500 font-bold px-1">
+                    <span id="sim-size-badge">0 MB</span>
+                    <span id="sim-percent-text" class="text-indigo-600 font-extrabold">0%</span>
+                </div>
+            </div>
+        </div>
+        <!-- MODAL VER COMPROBANTE -->
+        <div id="receipt-modal" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex flex-col items-center justify-center p-5 space-y-4">
+            <div class="w-full flex justify-between items-center bg-white p-3 rounded-t-2xl border-b">
+                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Comprobante de Recarga</h3>
+                <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-slate-700 p-1 text-base"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="w-full max-h-[450px] overflow-auto rounded-b-2xl border border-slate-200 bg-slate-50 p-2">
+                <img id="receipt-modal-img" src="" alt="Comprobante" class="w-full object-contain rounded-xl">
+            </div>
+        </div>
+    </div>
+    <script>
+        // CONFIGURACIÓN DE SUPABASE
+        const SUPABASE_URL = 'https://vvtcxysghliomrluznxf.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_V9uOqwjq4w_wg5q6vDS_9A_WRJzCUZB';
+        const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        
+        // DETECTAR CÓDIGO DE INVITACIÓN AUTOMÁTICO DESDE LA URL (EJ: ?ref=Z123456)
+        const urlParams = new URLSearchParams(window.location.search);
+        const refParam = urlParams.get('ref');
+        if (refParam) {
+            localStorage.setItem('zentra_pending_ref', refParam);
+        }
+        // DICCIONARIO MULTILENGUAJE
+        const i18n = {
+            es: {
+                nav_home: "Inicio", nav_vip: "VIP", nav_tasks: "Tareas", nav_wallet: "Billetera", nav_team: "Equipo",
+                login_title: "Iniciar Sesión", login_sub: "Ingresa tus credenciales de acceso",
+                register_title: "Crear Cuenta", register_sub: "Ingresa a la plataforma VIP Zentra",
+                email: "Correo Electrónico", password: "Contraseña", full_name: "Nombre Completo",
+                ref_code_opt: "Código de Invitación", btn_login: "Acceder", btn_register: "Registrarse",
+                no_account: "¿Aún no tienes cuenta?", has_account: "¿Ya tienes cuenta?",
+                total_balance: "Balance Total", membership: "Membresía", recharge: "Recargar", withdraw: "Retirar",
+                my_requests: "Historial de Movimientos", no_requests: "No tienes movimientos registrados.",
+                vip_levels: "Niveles VIP Zentra", daily_tasks: "Tareas Diarias", daily_earnings: "Ganancia Diaria",
+                active_level: "Nivel Actual", recharge_btn: "Recargar", tasks_title: "Tareas VIP",
+                completed: "Realizadas", done: "Listo", deposit_usdt: "Recargar USDT", withdraw_bal: "Retirar Saldo",
+                select_network: "1. Selecciona la Red", deposit_addr: "2. Dirección de Depósito", copy_addr: "Copiar Dirección",
+                amount_deposited: "Monto Depositado (USDT)", payment_receipt: "Comprobante de Pago",
+                min_deposit_err: "El monto mínimo de recarga es $15 USDT.", min_withdraw_err: "El retiro mínimo es $5.00 USDT.",
+                team_title: "Tu Equipo y Referidos", total_invited: "Total Personas Invitadas", your_ref_code: "Tu Código de Invitación",
+                copy_link: "Copiar Enlace Personal", invited_users: "Detalle de Invitados", no_invitees: "Aún no has invitado a nadie.",
+                vip_status: "Nivel VIP", date_joined: "Registro"
+            },
+            en: {
+                nav_home: "Home", nav_vip: "VIP", nav_tasks: "Tasks", nav_wallet: "Wallet", nav_team: "Team",
+                login_title: "Sign In", login_sub: "Enter your access credentials",
+                register_title: "Create Account", register_sub: "Join Zentra VIP Platform",
+                email: "Email Address", password: "Password", full_name: "Full Name",
+                ref_code_opt: "Invitation Code", btn_login: "Access", btn_register: "Register",
+                no_account: "Don't have an account?", has_account: "Already have an account?",
+                total_balance: "Total Balance", membership: "Membership", recharge: "Recharge", withdraw: "Withdraw",
+                my_requests: "Movement History", no_requests: "No recorded movements.",
+                vip_levels: "Zentra VIP Tiers", daily_tasks: "Daily Tasks", daily_earnings: "Daily Income",
+                active_level: "Current Level", recharge_btn: "Recharge", tasks_title: "VIP Tasks",
+                completed: "Completed", done: "Done", deposit_usdt: "Recharge USDT", withdraw_bal: "Withdraw Balance",
+                select_network: "1. Select Network", deposit_addr: "2. Deposit Address", copy_addr: "Copy Address",
+                amount_deposited: "Amount Deposited (USDT)", payment_receipt: "Payment Receipt",
+                min_deposit_err: "Minimum deposit amount is $15 USDT.", min_withdraw_err: "Minimum withdrawal is $5.00 USDT.",
+                team_title: "Your Team & Referrals", total_invited: "Total Invited People", your_ref_code: "Your Invitation Code",
+                copy_link: "Copy Personal Link", invited_users: "Invited Users Detail", no_invitees: "You haven't invited anyone yet.",
+                vip_status: "VIP Level", date_joined: "Joined"
+            }
+        };
+        const VIP_LEVELS = {
+            1:  { id: 1,  name: "VIP 1 (S1)",  minDeposit: 15,     dailyTasks: 3,   rewardPerTask: 0.20,  icon: "fa-shield-halved" },
+            2:  { id: 2,  name: "VIP 2 (S2)",  minDeposit: 30,     dailyTasks: 5,   rewardPerTask: 0.20,  icon: "fa-gem" },
+            3:  { id: 3,  name: "VIP 3 (S3)",  minDeposit: 120,    dailyTasks: 10,  rewardPerTask: 0.41,  icon: "fa-rocket" },
+            4:  { id: 4,  name: "VIP 4 (S4)",  minDeposit: 420,    dailyTasks: 20,  rewardPerTask: 0.75,  icon: "fa-bolt" },
+            5:  { id: 5,  name: "VIP 5 (S5)",  minDeposit: 1260,   dailyTasks: 40,  rewardPerTask: 1.12,  icon: "fa-crown" },
+            6:  { id: 6,  name: "VIP 6 (S6)",  minDeposit: 3780,   dailyTasks: 60,  rewardPerTask: 2.25,  icon: "fa-cubes" },
+            7:  { id: 7,  name: "VIP 7 (S7)",  minDeposit: 9450,   dailyTasks: 110, rewardPerTask: 3.30,  icon: "fa-server" },
+            8:  { id: 8,  name: "VIP 8 (S8)",  minDeposit: 23625,  dailyTasks: 140, rewardPerTask: 6.50,  icon: "fa-microchip" },
+            9:  { id: 9,  name: "VIP 9 (S9)",  minDeposit: 47250,  dailyTasks: 180, rewardPerTask: 11.70, icon: "fa-vault" },
+            10: { id: 10, name: "VIP 10 (S10)", minDeposit: 70900,  dailyTasks: 220, rewardPerTask: 14.30, icon: "fa-globe" },
+            11: { id: 11, name: "VIP 11 (S11)",minDeposit: 106350, dailyTasks: 240, rewardPerTask: 19.70, icon: "fa-fire" }
+        };
+        const baseApps = [
+            { name: "Zentra Wallet", category: "Finanzas", size: "22 MB", icon: "fa-wallet" },
+            { name: "CleanSpace Optimizer", category: "Herramientas", size: "15 MB", icon: "fa-broom" },
+            { name: "Secure Pass Lock", category: "Seguridad", size: "12 MB", icon: "fa-key" },
+            { name: "CryptoPulse Tracker", category: "Inversión", size: "42 MB", icon: "fa-chart-line" },
+            { name: "NetGuard Shield VPN", category: "Seguridad", size: "31 MB", icon: "fa-user-shield" },
+            { name: "TradeX Express", category: "Trading", size: "55 MB", icon: "fa-arrow-trend-up" },
+            { name: "CloudVault Sync", category: "Utilidad", size: "28 MB", icon: "fa-cloud-arrow-up" },
+            { name: "FastPay Terminal", category: "Finanzas", size: "36 MB", icon: "fa-credit-card" },
+            { name: "Quantum Node Mobile", category: "Blockchain", size: "78 MB", icon: "fa-server" },
+            { name: "AI Algorithmic Bot", category: "IA Finanzas", size: "88 MB", icon: "fa-robot" },
+            { name: "Enterprise Vault Pro", category: "Seguridad", size: "62 MB", icon: "fa-vault" },
+            { name: "Cloud Miner Prime", category: "Minería", size: "71 MB", icon: "fa-microchip" },
+            { name: "Global Pay Gateway", category: "Pagos", size: "50 MB", icon: "fa-globe" },
+            { name: "DeFi Staking Hub", category: "DeFi", size: "84 MB", icon: "fa-coins" },
+            { name: "HyperSpeed Booster", category: "Sistema", size: "39 MB", icon: "fa-bolt-lightning" }
+        ];
+        const VIP_APPS = {};
+        Object.keys(VIP_LEVELS).forEach(vipKey => {
+            const count = VIP_LEVELS[vipKey].dailyTasks;
+            VIP_APPS[vipKey] = [];
+            for (let i = 1; i <= count; i++) {
+                const base = baseApps[(i - 1) % baseApps.length];
+                VIP_APPS[vipKey].push({
+                    id: `v${vipKey}_app_${i}`,
+                    name: `${base.name} Pro #${i}`,
+                    category: base.category,
+                    size: base.size,
+                    icon: base.icon
+                });
+            }
+        });
+        const OFFICIAL_WALLETS = {
+            BEP20: "0xa928D823618967F74f5CcFcAf722242E2a87EFE3",
+            TRC20: "TBCBuURbcEYB2AyqM79cBdWovApTRB7dc9"
+        };
+        const INITIAL_ADMIN = {
+            id: 1, name: "Administrador Principal", email: "admin@zentra.com", password: "admin123",
+            role: "admin", balance: 500.00, taskBalance: 0.00, vip: 3, hasDeposited: true, refCode: "ZADMIN",
+            referredBy: null, dateJoined: new Date().toLocaleDateString(), completedTasksToday: [], lastTaskResetDate: new Date().toDateString()
+        };
+        const AppState = {
+            currentUser: JSON.parse(localStorage.getItem('zentra_current_user')) || null,
+            currentTab: JSON.parse(localStorage.getItem('zentra_current_user')) ? 'dashboard' : 'login',
+            walletSubTab: 'deposit',
+            selectedNetwork: 'BEP20', selectedFile: null,
+            lang: localStorage.getItem('zentra_v6_lang') || 'es',
+            users: JSON.parse(localStorage.getItem('zentra_v6_users')) || [INITIAL_ADMIN],
+            deposits: JSON.parse(localStorage.getItem('zentra_v6_deposits')) || [],
+            withdrawals: JSON.parse(localStorage.getItem('zentra_v6_withdrawals')) || []
+        };
+
+        // CALCULAR SALDO RETIRABLE (SOLO GANANCIAS POR TAREAS)
+        function getWithdrawableBalance(user) {
+            if (!user) return 0;
+            if (typeof user.taskBalance === 'number' && !isNaN(user.taskBalance)) {
+                return Math.max(0, Math.min(user.balance, user.taskBalance));
+            }
+            const userDepsTotal = AppState.deposits
+                .filter(d => d.userEmail === user.email || d.userId === user.id)
+                .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+            const estimatedTasks = Math.max(0, (parseFloat(user.balance) || 0) - userDepsTotal);
+            user.taskBalance = estimatedTasks;
+            return estimatedTasks;
+        }
+        
+        // CARGA ASÍNCRONA DE SUPABASE EN SEGUNDO PLANO
+        async function loadDataFromSupabase() {
+            if (!supabaseClient) return;
+            try {
+                const { data: profilesData } = await supabaseClient.from('profiles').select('*');
+                if (profilesData && profilesData.length > 0) {
+                    const localUsers = JSON.parse(localStorage.getItem('zentra_v6_users')) || [];
+                    AppState.users = profilesData.map(p => {
+                        const existingLocal = localUsers.find(lu => lu.email === p.email);
+                        return {
+                            id: p.id,
+                            userId: p.user_id,
+                            name: p.name,
+                            email: p.email,
+                            password: p.password,
+                            role: p.role,
+                            balance: parseFloat(p.balance),
+                            taskBalance: existingLocal && typeof existingLocal.taskBalance === 'number' ? existingLocal.taskBalance : undefined,
+                            vip: p.vip,
+                            hasDeposited: p.has_deposited,
+                            refCode: p.ref_code,
+                            referredBy: p.referred_by,
+                            dateJoined: p.date_joined,
+                            completedTasksToday: p.completed_tasks_today || [],
+                            lastTaskResetDate: p.last_task_reset_date
+                        };
+                    });
+                }
+                const { data: depData } = await supabaseClient.from('deposits').select('*');
+                if (depData) {
+                    AppState.deposits = depData.map(d => ({
+                        id: d.id,
+                        userId: d.user_id,
+                        userName: d.user_name,
+                        userEmail: d.user_email,
+                        amount: parseFloat(d.amount),
+                        network: d.network,
+                        receipt: d.receipt_url,
+                        date: new Date(d.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
+                        status: d.status
+                    }));
+                }
+                if (AppState.currentUser) {
+                    const fresh = AppState.users.find(u => u.email === AppState.currentUser.email);
+                    if (fresh) {
+                        if (typeof fresh.taskBalance !== 'number' && typeof AppState.currentUser.taskBalance === 'number') {
+                            fresh.taskBalance = AppState.currentUser.taskBalance;
+                        }
+                        AppState.currentUser = fresh;
+                    }
+                }
+                render();
+            } catch (err) {
+                console.error('Error cargando Supabase en segundo plano:', err);
+            }
+        }
+        async function syncUserToSupabase(user) {
+            if (!supabaseClient) return;
+            try {
+                await supabaseClient.from('profiles').upsert([
+                    {
+                        user_id: String(user.id),
+                        name: user.name,
+                        email: user.email,
+                        password: user.password,
+                        role: user.role,
+                        balance: user.balance,
+                        vip: user.vip,
+                        has_deposited: user.hasDeposited,
+                        ref_code: user.refCode,
+                        referred_by: user.referredBy,
+                        date_joined: user.dateJoined,
+                        completed_tasks_today: user.completedTasksToday,
+                        last_task_reset_date: user.lastTaskResetDate
+                    }
+                ], { onConflict: 'email' });
+            } catch (err) {
+                console.error('Error sincronizando usuario:', err);
+            }
+        }
+        function t(key) { return (i18n[AppState.lang] && i18n[AppState.lang][key]) ? i18n[AppState.lang][key] : key; }
+        
+        function toggleLanguage() {
+            AppState.lang = AppState.lang === 'es' ? 'en' : 'es';
+            localStorage.setItem('zentra_v6_lang', AppState.lang);
+            document.getElementById('lang-indicator').textContent = AppState.lang.toUpperCase();
+            render();
+        }
+        function persistState() {
+            localStorage.setItem('zentra_v6_users', JSON.stringify(AppState.users));
+            localStorage.setItem('zentra_v6_deposits', JSON.stringify(AppState.deposits));
+            localStorage.setItem('zentra_v6_withdrawals', JSON.stringify(AppState.withdrawals));
+            if (AppState.currentUser) {
+                localStorage.setItem('zentra_current_user', JSON.stringify(AppState.currentUser));
+                const index = AppState.users.findIndex(u => u.id === AppState.currentUser.id);
+                if (index !== -1) AppState.users[index] = AppState.currentUser;
+                syncUserToSupabase(AppState.currentUser);
+            } else {
+                localStorage.removeItem('zentra_current_user');
+            }
+        }
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            toastMsg.textContent = message;
+            toastIcon.className = isSuccess ? "fa-solid fa-circle-check text-emerald-500 text-sm" : "fa-solid fa-circle-exclamation text-rose-500 text-sm";
+            toast.classList.remove('opacity-0', '-translate-y-2', 'pointer-events-none');
+            setTimeout(() => { toast.classList.add('opacity-0', '-translate-y-2', 'pointer-events-none'); }, 3000);
+        }
+        
+        function switchTab(tabName) { 
+            AppState.currentTab = tabName; 
+            if (tabName === 'admin' && typeof loadDataFromSupabase === 'function') {
+                loadDataFromSupabase();
+            }
+            render(); 
+        }
+        
+        function calculateVipFromAmount(amount) {
+            if (amount >= 106350) return 11;
+            if (amount >= 70900)  return 10;
+            if (amount >= 47250)  return 9;
+            if (amount >= 23625)  return 8;
+            if (amount >= 9450)   return 7;
+            if (amount >= 3780)   return 6;
+            if (amount >= 1260)   return 5;
+            if (amount >= 420)    return 4;
+            if (amount >= 120)    return 3;
+            if (amount >= 30)     return 2;
+            if (amount >= 15)     return 1;
+            return 0;
+        }
+        async function handleAuth(e, isRegistering) {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim().toLowerCase();
+            const password = document.getElementById('auth-password').value;
+            if (isRegistering) {
+                const name = document.getElementById('auth-name').value.trim();
+                let refCodeInput = document.getElementById('auth-refcode') ? document.getElementById('auth-refcode').value.trim() : '';
+                
+                const savedRef = localStorage.getItem('zentra_pending_ref');
+                if (!refCodeInput && savedRef) {
+                    refCodeInput = savedRef;
+                }
+                if (AppState.users.some(u => u.email === email)) {
+                    return showToast(AppState.lang === 'es' ? 'El correo ya se encuentra registrado.' : 'Email is already registered.', false);
+                }
+                
+                let validReferrerCode = null;
+                if (refCodeInput) {
+                    const refUser = AppState.users.find(u => u.refCode === refCodeInput);
+                    if (refUser) validReferrerCode = refUser.refCode;
+                }
+                const newUser = {
+                    id: Date.now(), name, email, password, role: 'user', balance: 0.00, taskBalance: 0.00, vip: 0,
+                    hasDeposited: false, refCode: 'Z' + Math.floor(100000 + Math.random() * 900000),
+                    referredBy: validReferrerCode, dateJoined: new Date().toLocaleDateString(),
+                    completedTasksToday: [], lastTaskResetDate: new Date().toDateString()
+                };
+                AppState.users.push(newUser);
+                AppState.currentUser = newUser;
+                localStorage.removeItem('zentra_pending_ref');
+                await syncUserToSupabase(newUser);
+                persistState();
+                showToast(AppState.lang === 'es' ? '¡Registro exitoso! Bienvenido.' : 'Registration successful! Welcome.');
+            } else {
+                const user = AppState.users.find(u => u.email === email && u.password === password);
+                if (!user) return showToast(AppState.lang === 'es' ? 'Credenciales incorrectas.' : 'Incorrect credentials.', false);
+                
+                const today = new Date().toDateString();
+                if (user.lastTaskResetDate !== today) {
+                    user.completedTasksToday = [];
+                    user.lastTaskResetDate = today;
+                }
+                AppState.currentUser = user;
+                persistState();
+                showToast(`${AppState.lang === 'es' ? 'Bienvenido' : 'Welcome'}, ${user.name}`);
+            }
+            switchTab('dashboard');
+        }
+        function logout() { 
+            AppState.currentUser = null; 
+            localStorage.removeItem('zentra_current_user');
+            switchTab('login'); 
+            showToast(AppState.lang === 'es' ? 'Sesión cerrada.' : 'Logged out.'); 
+        }
+        function startTaskDownload(appId) {
+            const user = AppState.currentUser;
+            if (!user.hasDeposited || user.vip === 0) {
+                return showToast(AppState.lang === 'es' ? 'Debes recargar USDT para desbloquear las tareas.' : 'Recharge USDT to unlock tasks.', false);
+            }
+            const currentVipTier = VIP_LEVELS[user.vip];
+            if (user.completedTasksToday.length >= currentVipTier.dailyTasks) {
+                return showToast(AppState.lang === 'es' ? 'Límite de tareas diarias alcanzado.' : 'Daily task limit reached.', false);
+            }
+            if (user.completedTasksToday.includes(appId)) {
+                return showToast(AppState.lang === 'es' ? 'Esta tarea ya fue realizada hoy.' : 'Task already completed today.', false);
+            }
+            const appList = VIP_APPS[user.vip] || [];
+            const app = appList.find(a => a.id === appId);
+            if (!app) return;
+            const modal = document.getElementById('sim-modal');
+            document.getElementById('sim-app-icon').className = `fa-solid ${app.icon}`;
+            document.getElementById('sim-app-title').textContent = app.name;
+            document.getElementById('sim-size-badge').textContent = app.size;
+            document.getElementById('sim-status-text').textContent = AppState.lang === 'es' ? "Conectando servidor..." : "Connecting server...";
+            document.getElementById('sim-progress-bar').style.width = "0%";
+            document.getElementById('sim-percent-text').textContent = "0%";
+            modal.classList.remove('hidden');
+            let progress = 0;
+            const timer = setInterval(() => {
+                progress += 25;
+                document.getElementById('sim-progress-bar').style.width = `${progress}%`;
+                document.getElementById('sim-percent-text').textContent = `${progress}%`;
+                if (progress === 50) document.getElementById('sim-status-text').textContent = AppState.lang === 'es' ? "Verificando instalación..." : "Verifying installation...";
+                if (progress >= 100) {
+                    clearInterval(timer);
+                    document.getElementById('sim-status-text').textContent = AppState.lang === 'es' ? "¡Tarea completada!" : "Task completed!";
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        const reward = currentVipTier.rewardPerTask;
+                        const currentTasksBal = getWithdrawableBalance(user);
+                        user.balance += reward;
+                        user.taskBalance = currentTasksBal + reward;
+                        user.completedTasksToday.push(appId);
+                        persistState();
+                        showToast(`+$${reward.toFixed(2)} USDT ${AppState.lang === 'es' ? 'añadidos a tu saldo.' : 'added to your balance.'}`);
+                        render();
+                    }, 400);
+                }
+            }, 250);
+        }
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            AppState.selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const preview = document.getElementById('receipt-preview');
+                if (preview) { preview.src = evt.target.result; preview.classList.remove('hidden'); }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        let isSubmittingDeposit = false;
+
+        async function handleDepositSubmit(e) {
+            e.preventDefault();
+            if (isSubmittingDeposit) return;
+
+            const amount = parseFloat(document.getElementById('deposit-amount').value);
+            if (isNaN(amount) || amount < 15) return showToast(t('min_deposit_err'), false);
+            if (!AppState.selectedFile) return showToast(AppState.lang === 'es' ? 'Adjunta la foto del comprobante.' : 'Please attach the receipt screenshot.', false);
+            
+            isSubmittingDeposit = true;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+
+            try {
+                let receiptUrl = '#';
+                if (supabaseClient) {
+                    try {
+                        const fileName = `${Date.now()}_${AppState.selectedFile.name}`;
+                        const { error: uploadError } = await supabaseClient.storage.from('captures').upload(fileName, AppState.selectedFile);
+                        if (uploadError) {
+                            receiptUrl = URL.createObjectURL(AppState.selectedFile);
+                        } else {
+                            const { data: publicUrlData } = supabaseClient.storage.from('captures').getPublicUrl(fileName);
+                            receiptUrl = publicUrlData.publicUrl;
+                        }
+                        await supabaseClient.from('deposits').insert([{
+                            user_id: AppState.currentUser.id, user_name: AppState.currentUser.name,
+                            user_email: AppState.currentUser.email, amount: amount, network: AppState.selectedNetwork,
+                            receipt_url: receiptUrl, status: 'Completado'
+                        }]);
+                    } catch (err) {
+                        receiptUrl = URL.createObjectURL(AppState.selectedFile);
+                    }
+                } else {
+                    receiptUrl = URL.createObjectURL(AppState.selectedFile);
+                }
+                
+                const currentTasksBal = getWithdrawableBalance(AppState.currentUser);
+                const calculatedVip = calculateVipFromAmount(amount);
+                if (calculatedVip > AppState.currentUser.vip) AppState.currentUser.vip = calculatedVip;
+                AppState.currentUser.hasDeposited = true;
+                AppState.currentUser.balance += amount;
+                AppState.currentUser.taskBalance = currentTasksBal;
+                AppState.deposits.unshift({
+                    id: Date.now(), userId: AppState.currentUser.id, userName: AppState.currentUser.name,
+                    userEmail: AppState.currentUser.email, amount: amount, network: AppState.selectedNetwork,
+                    receipt: receiptUrl, date: new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }), status: 'Completado'
+                });
+                AppState.selectedFile = null;
+                persistState();
+                showToast(AppState.lang === 'es' ? '¡Recarga exitosa!' : 'Recharge successful!');
+                switchTab('dashboard');
+            } finally {
+                isSubmittingDeposit = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
+            }
+        }
+        function handleWithdrawSubmit(e) {
+            e.preventDefault();
+            const currentDay = new Date().getDate();
+            if (currentDay !== 5 && currentDay !== 15 && currentDay !== 25) {
+                return showToast(AppState.lang === 'es' ? 'Los retiros solo están permitidos los días 5, 15 y 25 del mes.' : 'Withdrawals allowed only on the 5th, 15th, and 25th.', false);
+            }
+            const address = document.getElementById('withdraw-address').value.trim();
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            const withdrawableBal = getWithdrawableBalance(AppState.currentUser);
+
+            if (!address) return showToast(AppState.lang === 'es' ? 'Ingresa una dirección válida.' : 'Enter a valid address.', false);
+            if (amount < 5) return showToast(t('min_withdraw_err'), false);
+            if (amount > withdrawableBal) {
+                return showToast(AppState.lang === 'es' ? 'Solo puedes retirar el saldo ganado con tareas.' : 'You can only withdraw earnings from tasks.', false);
+            }
+
+            AppState.currentUser.balance = Math.max(0, AppState.currentUser.balance - amount);
+            AppState.currentUser.taskBalance = Math.max(0, withdrawableBal - amount);
+            AppState.withdrawals.unshift({
+                id: Date.now(), userId: AppState.currentUser.id, userName: AppState.currentUser.name,
+                userEmail: AppState.currentUser.email, walletAddress: address, amount: amount,
+                date: new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }), status: 'Pendiente'
+            });
+            persistState();
+            showToast(AppState.lang === 'es' ? 'Solicitud de retiro registrada.' : 'Withdrawal submitted.');
+            render();
+        }
+        function adminApproveWithdrawal(withId) {
+            const w = AppState.withdrawals.find(x => x.id === withId);
+            if (!w || w.status !== 'Pendiente') return;
+            w.status = 'Aprobado';
+            persistState();
+            showToast(AppState.lang === 'es' ? 'Retiro marcado como pagado.' : 'Withdrawal paid.');
+            render();
+        }
+        function adminRejectWithdrawal(withId) {
+            const w = AppState.withdrawals.find(x => x.id === withId);
+            if (!w || w.status !== 'Pendiente') return;
+            w.status = 'Rechazado';
+            const user = AppState.users.find(u => u.id === w.userId);
+            if (user) {
+                const currentTasksBal = getWithdrawableBalance(user);
+                user.balance += w.amount;
+                user.taskBalance = currentTasksBal + w.amount;
+                syncUserToSupabase(user);
+            }
+            persistState();
+            showToast(AppState.lang === 'es' ? 'Retiro rechazado y reembolsado.' : 'Rejected & refunded.');
+            render();
+        }
+        function adminUpdateBalance(userId, action) {
+            const input = document.getElementById(`admin-bal-input-${userId}`);
+            const val = parseFloat(input.value);
+            if (isNaN(val) || val <= 0) return showToast(AppState.lang === 'es' ? 'Monto inválido.' : 'Invalid amount.', false);
+            const user = AppState.users.find(u => u.id === userId);
+            if (!user) return;
+            const currentTasksBal = getWithdrawableBalance(user);
+            if (action === 'add') {
+                user.balance += val;
+                user.taskBalance = currentTasksBal;
+            } else {
+                user.balance = Math.max(0, user.balance - val);
+                user.taskBalance = Math.min(currentTasksBal, user.balance);
+            }
+            input.value = '';
+            persistState();
+            render();
+        }
+        function adminChangeVip(userId, newVip) {
+            const user = AppState.users.find(u => u.id === userId);
+            if (!user) return;
+            user.vip = parseInt(newVip);
+            if (user.vip > 0) user.hasDeposited = true;
+            persistState();
+            render();
+        }
+        function openReceiptModal(imgSrc) {
+            document.getElementById('receipt-modal-img').src = imgSrc;
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+        function closeReceiptModal() { document.getElementById('receipt-modal').classList.add('hidden'); }
+        function render() {
+            const main = document.getElementById('main-content');
+            const nav = document.getElementById('bottom-navbar');
+            const headerInfo = document.getElementById('header-user-info');
+            const badgeVipText = document.getElementById('badge-vip-text');
+            const adminBtn = document.getElementById('admin-header-btn');
+            
+            document.getElementById('lang-indicator').textContent = AppState.lang.toUpperCase();
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                const isActive = btn.dataset.tab === AppState.currentTab;
+                btn.className = `nav-tab flex flex-col items-center py-1 flex-1 transition ${isActive ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-400 hover:text-slate-600'}`;
+            });
+            if (!AppState.currentUser) {
+                nav.classList.add('hidden');
+                headerInfo.classList.add('hidden');
+                const pendingRef = localStorage.getItem('zentra_pending_ref') || '';
+                
+                if (AppState.currentTab === 'register') {
+                    main.innerHTML = `
+                        <div class="flex flex-col justify-center min-h-[480px] space-y-5 py-2">
+                            <div class="text-center space-y-1">
+                                <h2 class="text-xl font-black text-slate-900">${t('register_title')}</h2>
+                                <p class="text-xs text-slate-500">${t('register_sub')}</p>
+                            </div>
+                            <form onsubmit="handleAuth(event, true)" class="glass-card p-5 rounded-3xl space-y-3.5 shadow-sm">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">${t('full_name')}</label>
+                                    <input type="text" id="auth-name" required placeholder="Tu Nombre" class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">${t('email')}</label>
+                                    <input type="email" id="auth-email" required placeholder="correo@ejemplo.com" class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">${t('password')}</label>
+                                    <input type="password" id="auth-password" required placeholder="••••••••" class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">${t('ref_code_opt')}</label>
+                                    <input type="text" id="auth-refcode" value="${pendingRef}" placeholder="Ej: Z849201" class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-2xl text-xs transition shadow-md shadow-indigo-600/20">
+                                    ${t('btn_register')}
+                                </button>
+                            </form>
+                            <p class="text-center text-xs text-slate-500">${t('has_account')} <a href="#" onclick="switchTab('login')" class="text-indigo-600 font-bold hover:underline">${t('btn_login')}</a></p>
+                        </div>
+                    `;
+                } else {
+                    main.innerHTML = `
+                        <div class="flex flex-col justify-center min-h-[480px] space-y-5 py-2">
+                            <div class="text-center space-y-1">
+                                <h2 class="text-xl font-black text-slate-900">${t('login_title')}</h2>
+                                <p class="text-xs text-slate-500">${t('login_sub')}</p>
+                            </div>
+                            <form onsubmit="handleAuth(event, false)" class="glass-card p-5 rounded-3xl space-y-3.5 shadow-sm">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">${t('email')}</label>
+                                    <input type="email" id="auth-email" required placeholder="correo@ejemplo.com" class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">${t('password')}</label>
+                                    <input type="password" id="auth-password" required placeholder="••••••••" class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-2xl text-xs transition shadow-md shadow-indigo-600/20">
+                                    ${t('btn_login')}
+                                </button>
+                            </form>
+                            <p class="text-center text-xs text-slate-500">${t('no_account')} <a href="#" onclick="switchTab('register')" class="text-indigo-600 font-bold hover:underline">${t('btn_register')}</a></p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            nav.classList.remove('hidden');
+            headerInfo.classList.remove('hidden');
+            badgeVipText.textContent = AppState.currentUser.vip > 0 ? `VIP ${AppState.currentUser.vip}` : 'VIP 0';
+            if (AppState.currentUser.role === 'admin') adminBtn.classList.remove('hidden');
+            else adminBtn.classList.add('hidden');
+            const user = AppState.currentUser;
+            if (AppState.currentTab === 'dashboard') {
+                const userDeposits = AppState.deposits.filter(d => d.userId === user.id);
+                const userWithdrawals = AppState.withdrawals.filter(w => w.userId === user.id);
+                main.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-800 p-5 rounded-3xl shadow-lg border border-indigo-500/25 relative overflow-hidden space-y-3">
+                            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+                            <div>
+                                <span class="text-[10px] font-extrabold text-indigo-100 uppercase tracking-widest block">${t('total_balance')}</span>
+                                <h3 class="text-3xl font-black text-white mt-0.5 tracking-tight">$${user.balance.toFixed(2)} <span class="text-xs font-bold text-indigo-200">USDT</span></h3>
+                            </div>
+                            <div class="pt-3 border-t border-white/15 flex justify-between items-center text-xs">
+                                <div>
+                                    <span class="text-[9px] text-indigo-200 block uppercase font-bold">${t('membership')}</span>
+                                    <span class="font-extrabold text-white flex items-center gap-1 text-xs mt-0.5"><i class="fa-solid fa-crown text-amber-300"></i> ${user.vip > 0 ? `VIP ${user.vip}` : 'VIP 0'}</span>
+                                </div>
+                                <button onclick="switchTab('wallet')" class="bg-white text-indigo-700 font-extrabold px-4 py-2 rounded-xl text-xs shadow-sm transition hover:bg-slate-100">${t('recharge')}</button>
+                            </div>
+                        </div>
+                        <div class="glass-card p-4 rounded-3xl border border-slate-200 space-y-3">
+                            <h4 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> ${t('my_requests')}
+                            </h4>
+                            <div class="space-y-2 text-xs">
+                                ${userDeposits.length === 0 && userWithdrawals.length === 0 ? `<p class="text-[11px] text-slate-400 text-center py-2">${t('no_requests')}</p>` : ''}
+                                ${userDeposits.map(d => `
+                                    <div class="flex items-center justify-between p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                                        <div><span class="font-bold text-slate-800 block">${t('recharge')} (${d.network})</span><span class="text-[10px] text-slate-400">${d.date}</span></div>
+                                        <div class="text-right"><span class="font-black text-emerald-600">+$${d.amount.toFixed(2)}</span><span class="block text-[9px] font-bold text-emerald-600">${d.status}</span></div>
+                                    </div>
+                                `).join('')}
+                                ${userWithdrawals.map(w => `
+                                    <div class="flex items-center justify-between p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                                        <div><span class="font-bold text-slate-800 block">${t('withdraw')} USDT</span><span class="text-[10px] text-slate-400">${w.date}</span></div>
+                                        <div class="text-right"><span class="font-black text-rose-500">-$${w.amount.toFixed(2)}</span><span class="block text-[9px] font-bold ${w.status==='Aprobado'?'text-emerald-600':w.status==='Rechazado'?'text-rose-500':'text-amber-500'}">${w.status}</span></div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (AppState.currentTab === 'vip') {
+                main.innerHTML = `
+                    <div class="space-y-3">
+                        <h2 class="text-base font-black text-slate-900">${t('vip_levels')}</h2>
+                        <div class="space-y-3">
+                            ${Object.keys(VIP_LEVELS).map(key => {
+                                const level = VIP_LEVELS[key];
+                                const isCurrent = user.vip === level.id;
+                                const dailyEarnings = (level.dailyTasks * level.rewardPerTask).toFixed(2);
+                                return `
+                                    <div class="glass-card p-4 rounded-3xl border ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 shadow-sm' : 'border-slate-200'} space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 bg-amber-500/15 text-amber-600 border border-amber-500/30 rounded-2xl flex items-center justify-center font-bold text-lg"><i class="fa-solid ${level.icon}"></i></div>
+                                                <div><h3 class="text-xs font-black text-slate-900">${level.name}</h3><p class="text-[11px] text-slate-500">${t('recharge')}: <span class="font-bold text-emerald-600">$${level.minDeposit} USDT</span></p></div>
+                                            </div>
+                                            ${isCurrent ? `<span class="bg-indigo-600 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">${t('active_level')}</span>` : ''}
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 text-[11px]">
+                                            <div><span class="text-slate-400 block text-[9px]">${t('daily_tasks')}</span><span class="font-bold text-slate-800">${level.dailyTasks} Descargas</span></div>
+                                            <div><span class="text-slate-400 block text-[9px]">${t('daily_earnings')}</span><span class="font-black text-emerald-600">+$${dailyEarnings} USDT/día</span></div>
+                                        </div>
+                                        <button onclick="switchTab('wallet')" class="w-full ${isCurrent ? 'bg-slate-200 text-slate-600 cursor-default' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} font-extrabold py-2.5 rounded-2xl text-xs transition">
+                                            ${isCurrent ? t('active_level') : t('recharge_btn')}
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else if (AppState.currentTab === 'tasks') {
+                const effectiveVip = user.vip > 0 ? user.vip : 1;
+                const currentVipTier = VIP_LEVELS[effectiveVip];
+                const appList = VIP_APPS[effectiveVip] || [];
+                main.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-base font-black text-slate-900">${t('tasks_title')} VIP ${effectiveVip}</h2>
+                            <span class="text-[10px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-200 px-2.5 py-1 rounded-full">${user.completedTasksToday.length}/${currentVipTier.dailyTasks} ${t('completed')}</span>
+                        </div>
+                        <div class="space-y-2.5">
+                            ${appList.map(app => {
+                                const isDone = user.completedTasksToday.includes(app.id);
+                                return `
+                                    <div class="glass-card p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 ${isDone ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600'} rounded-2xl flex items-center justify-center font-bold text-base"><i class="fa-solid ${app.icon}"></i></div>
+                                            <div><h4 class="text-xs font-black text-slate-800">${app.name}</h4><span class="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-semibold">${app.category}</span></div>
+                                        </div>
+                                        <button onclick="startTaskDownload('${app.id}')" ${isDone?'disabled':''} class="${isDone ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} font-extrabold text-xs px-3.5 py-2 rounded-xl transition">
+                                            ${isDone ? t('done') : `+$${currentVipTier.rewardPerTask.toFixed(2)}`}
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else if (AppState.currentTab === 'wallet') {
+                const sub = AppState.walletSubTab;
+                const net = AppState.selectedNetwork;
+                const withdrawableBal = getWithdrawableBalance(user);
+                main.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex bg-slate-200/80 p-1 rounded-2xl border border-slate-200">
+                            <button onclick="AppState.walletSubTab = 'deposit'; render();" class="flex-1 py-2 rounded-xl text-xs font-extrabold transition ${sub==='deposit'?'bg-indigo-600 text-white shadow-sm':'text-slate-600'}">${t('deposit_usdt')}</button>
+                            <button onclick="AppState.walletSubTab = 'withdraw'; render();" class="flex-1 py-2 rounded-xl text-xs font-extrabold transition ${sub==='withdraw'?'bg-indigo-600 text-white shadow-sm':'text-slate-600'}">${t('withdraw_bal')}</button>
+                        </div>
+                        ${sub === 'deposit' ? `
+                            <div class="space-y-3 text-xs">
+                                <label class="block font-extrabold text-slate-500 uppercase text-[10px]">${t('select_network')}</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="AppState.selectedNetwork = 'BEP20'; render();" class="p-3 border rounded-2xl text-center transition ${net === 'BEP20' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 text-slate-600 bg-white'}">USDT (BEP20)</button>
+                                    <button onclick="AppState.selectedNetwork = 'TRC20'; render();" class="p-3 border rounded-2xl text-center transition ${net === 'TRC20' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 text-slate-600 bg-white'}">USDT (TRC20)</button>
+                                </div>
+                                <div class="glass-card p-4 rounded-3xl border border-slate-200 text-center space-y-2">
+                                    <span class="text-[10px] font-extrabold text-slate-500 uppercase block">${t('deposit_addr')}</span>
+                                    <div class="bg-white border border-slate-200 p-3 rounded-2xl break-all font-mono font-bold text-indigo-600 text-xs">${OFFICIAL_WALLETS[net]}</div>
+                                    <button onclick="navigator.clipboard.writeText('${OFFICIAL_WALLETS[net]}');showToast('Dirección copiada');" class="text-xs font-extrabold text-indigo-600 hover:underline">${t('copy_addr')}</button>
+                                </div>
+                                <form onsubmit="handleDepositSubmit(event)" class="glass-card p-4 rounded-3xl border border-slate-200 space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">${t('amount_deposited')}</label>
+                                        <input type="number" id="deposit-amount" min="15" placeholder="Mínimo $15 USDT" required class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">${t('payment_receipt')}</label>
+                                        <input type="file" id="deposit-file" accept="image/*" onchange="handleFileSelect(event)" required class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-indigo-50 file:text-indigo-600 font-medium">
+                                    </div>
+                                    <div class="text-center">
+                                        <img id="receipt-preview" src="#" alt="Comprobante" class="hidden max-h-28 mx-auto rounded-xl border border-slate-200 mt-2">
+                                    </div>
+                                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3 rounded-2xl text-xs transition shadow-md shadow-indigo-600/20">${t('recharge')}</button>
+                                </form>
+                            </div>
+                        ` : `
+                            <form onsubmit="handleWithdrawSubmit(event)" class="glass-card p-5 rounded-3xl border border-slate-200 space-y-3.5">
+                                <div class="bg-amber-500/10 border border-amber-500/30 p-3 rounded-2xl text-amber-700 text-[11px] font-bold flex items-center gap-2">
+                                    <i class="fa-solid fa-calendar-days text-sm"></i>
+                                    <span>Los días de retiro permitidos son únicamente los <strong>5, 15 y 25</strong> de cada mes.</span>
+                                </div>
+                                <div class="bg-indigo-50/80 border border-indigo-200 p-3 rounded-2xl flex justify-between items-center text-xs">
+                                    <span class="font-bold text-slate-700">Ganancias por tareas (Retirable):</span>
+                                    <span class="font-black text-emerald-600">$${withdrawableBal.toFixed(2)} USDT</span>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Dirección Billetera (TRC20 / BEP20)</label>
+                                    <input type="text" id="withdraw-address" placeholder="Ej: TX9zQ... o 0x71C..." required class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Monto a Retirar (Disponible: $${withdrawableBal.toFixed(2)})</label>
+                                    <input type="number" id="withdraw-amount" step="0.01" max="${withdrawableBal.toFixed(2)}" min="5" placeholder="Mínimo $5.00 USDT" required class="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600">
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3 rounded-2xl text-xs transition">${t('withdraw')}</button>
+                            </form>
+                        `}
+                    </div>
+                `;
+            } else if (AppState.currentTab === 'referral') {
+                const refLink = `${window.location.origin}${window.location.pathname}?ref=${user.refCode}`;
+                const teamMembers = AppState.users.filter(u => u.referredBy === user.refCode);
+                main.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="glass-card p-5 rounded-3xl border border-slate-200 text-center space-y-3">
+                            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">${t('your_ref_code')}</span>
+                            <div class="text-xl font-black text-indigo-600 tracking-wider bg-white border border-slate-200 p-3 rounded-2xl shadow-sm">${user.refCode}</div>
+                            <div class="bg-slate-100 border border-slate-200 p-2.5 rounded-2xl break-all text-[11px] text-slate-600 font-mono">${refLink}</div>
+                            <button onclick="navigator.clipboard.writeText('${refLink}');showToast('Enlace copiado');" class="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs transition shadow-md shadow-indigo-600/20">${t('copy_link')}</button>
+                        </div>
+                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100/80 p-4 rounded-3xl border border-indigo-200 flex items-center justify-between">
+                            <div><span class="text-[10px] font-extrabold text-indigo-600 uppercase tracking-wider block">${t('total_invited')}</span><h4 class="text-2xl font-black text-slate-900">${teamMembers.length} <span class="text-xs font-bold text-slate-500">personas</span></h4></div>
+                            <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center text-xl shadow-md shadow-indigo-600/30"><i class="fa-solid fa-users"></i></div>
+                        </div>
+                        <div class="glass-card p-4 rounded-3xl border border-slate-200 space-y-3">
+                            <h4 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                <span><i class="fa-solid fa-user-group text-indigo-600 mr-1.5"></i> ${t('invited_users')}</span>
+                                <span class="text-[10px] text-indigo-600 font-extrabold">${teamMembers.length}</span>
+                            </h4>
+                            <div class="space-y-2 text-xs">
+                                ${teamMembers.length === 0 ? `<div class="text-center py-6 space-y-1"><i class="fa-solid fa-user-plus text-slate-300 text-2xl"></i><p class="text-[11px] text-slate-400">${t('no_invitees')}</p></div>` : teamMembers.map(member => `
+                                    <div class="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                                        <div><span class="font-extrabold text-slate-800 block">${member.name}</span><span class="text-[10px] text-slate-400">${member.email}</span></div>
+                                        <div class="text-right">
+                                            <span class="text-[10px] font-extrabold bg-amber-500/10 text-amber-600 border border-amber-500/30 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-crown text-[9px]"></i> VIP ${member.vip}</span>
+                                            <span class="block text-[9px] text-slate-400 mt-0.5">Registro: ${member.dateJoined || 'Reciente'}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (AppState.currentTab === 'admin' && user.role === 'admin') {
+                const pendingWithdrawals = AppState.withdrawals.filter(w => w.status === 'Pendiente');
+                const usersWithReferrerInfo = AppState.users.map(u => {
+                    let referrerName = 'Ninguno (Registro directo)';
+                    if (u.referredBy) {
+                        const sponsor = AppState.users.find(s => s.refCode === u.referredBy);
+                        if (sponsor) referrerName = `${sponsor.name} (${sponsor.email}) - Código: ${sponsor.refCode}`;
+                    }
+                    return { ...u, referrerName };
+                });
+                main.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-2">
+                            <h2 class="text-base font-black text-amber-600"><i class="fa-solid fa-sliders mr-1"></i> Panel Administrador</h2>
+                            <span class="text-[10px] bg-amber-500/10 text-amber-600 border border-amber-500/30 px-2 py-0.5 rounded-md font-extrabold">ADMIN</span>
+                        </div>
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Historial de Recargas Online (${AppState.deposits.length})</h3>
+                            ${AppState.deposits.length === 0 ? '<p class="text-xs text-slate-400 italic">No hay recargas registradas.</p>' : AppState.deposits.map(dep => `
+                                <div class="glass-card p-3.5 rounded-2xl border border-slate-200 space-y-2 text-xs shadow-sm">
+                                    <div class="flex justify-between items-start">
+                                        <div><span class="font-extrabold text-slate-800 block">${dep.userName}</span><span class="text-[10px] text-slate-500">${dep.userEmail} • Red: ${dep.network} • ${dep.date}</span></div>
+                                        <span class="font-black text-emerald-600 text-sm">+$${dep.amount.toFixed(2)} USDT</span>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                                        <button onclick="openReceiptModal('${dep.receipt}')" class="text-indigo-600 font-extrabold text-[11px] underline"><i class="fa-solid fa-image mr-1"></i> Ver Comprobante Supabase</button>
+                                        <span class="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">Sincronizado Online</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Retiros Pendientes (${pendingWithdrawals.length})</h3>
+                            ${pendingWithdrawals.length === 0 ? '<p class="text-xs text-slate-400 italic">No hay retiros pendientes.</p>' : pendingWithdrawals.map(w => `
+                                <div class="glass-card p-3.5 rounded-2xl border border-slate-200 space-y-2 text-xs shadow-sm">
+                                    <div class="flex justify-between items-start">
+                                        <div><span class="font-extrabold text-slate-800 block">${w.userName}</span><span class="text-[10px] text-slate-500">${w.userEmail} • ${w.date}</span></div>
+                                        <span class="font-black text-rose-500 text-sm">-$${w.amount.toFixed(2)} USDT</span>
+                                    </div>
+                                    <div class="bg-slate-100 p-2 rounded-xl break-all font-mono text-[10px] text-slate-700"><strong>Dirección de Destino:</strong> ${w.walletAddress}</div>
+                                    <div class="flex justify-end gap-2 pt-1">
+                                        <button onclick="adminRejectWithdrawal(${w.id})" class="bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1 rounded-xl font-bold text-xs">Rechazar</button>
+                                        <button onclick="adminApproveWithdrawal(${w.id})" class="bg-emerald-600 text-white px-3 py-1 rounded-xl font-bold text-xs">Aprobar Pago</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Usuarios Registrados (${usersWithReferrerInfo.length})</h3>
+                            <div class="space-y-2.5">
+                                ${usersWithReferrerInfo.map(u => `
+                                    <div class="glass-card p-3.5 rounded-2xl border border-slate-200 space-y-2 text-xs shadow-sm">
+                                        <div class="flex justify-between items-center">
+                                            <div><span class="font-extrabold text-slate-800 block">${u.name} ${u.role==='admin'?'<span class="text-amber-600 text-[9px]">(Admin)</span>':''}</span><span class="text-[10px] text-slate-500">${u.email}</span></div>
+                                            <div class="text-right"><span class="font-black text-emerald-600 block">$${u.balance.toFixed(2)}</span><span class="text-[10px] font-bold text-amber-600">VIP ${u.vip}</span></div>
+                                        </div>
+                                        <div class="bg-slate-100 p-2 rounded-xl text-[10px] text-slate-600">
+                                            <strong>Invitado por:</strong> ${u.referrerName} <br>
+                                            <strong>Su Código Personal:</strong> <span class="font-mono font-bold">${u.refCode}</span>
+                                        </div>
+                                        <div class="flex gap-2 items-center pt-2 border-t border-slate-100">
+                                            <input type="number" id="admin-bal-input-${u.id}" placeholder="Monto" class="bg-white border border-slate-300 rounded-xl p-1.5 text-xs text-slate-800 w-24 outline-none">
+                                            <button onclick="adminUpdateBalance(${u.id}, 'add')" class="bg-indigo-600 text-white px-2.5 py-1 rounded-xl font-bold text-[11px]">+ Sumar</button>
+                                            <button onclick="adminUpdateBalance(${u.id}, 'sub')" class="bg-rose-600 text-white px-2.5 py-1 rounded-xl font-bold text-[11px]">- Restar</button>
+                                        </div>
+                                        <div class="flex items-center gap-2 pt-1">
+                                            <span class="text-[10px] text-slate-500 font-bold">Cambiar VIP:</span>
+                                            <select onchange="adminChangeVip(${u.id}, this.value)" class="bg-white border border-slate-300 text-slate-800 rounded-xl p-1 text-xs outline-none">
+                                                <option value="0" ${u.vip === 0 ? 'selected' : ''}>VIP 0</option>
+                                                <option value="1" ${u.vip === 1 ? 'selected' : ''}>VIP 1 (S0)</option>
+                                                <option value="2" ${u.vip === 2 ? 'selected' : ''}>VIP 2 (S1)</option>
+                                                <option value="3" ${u.vip === 3 ? 'selected' : ''}>VIP 3 (S2)</option>
+                                                <option value="4" ${u.vip === 4 ? 'selected' : ''}>VIP 4 (S3)</option>
+                                                <option value="5" ${u.vip === 5 ? 'selected' : ''}>VIP 5 (S4)</option>
+                                                <option value="6" ${u.vip === 6 ? 'selected' : ''}>VIP 6 (S5)</option>
+                                                <option value="7" ${u.vip === 7 ? 'selected' : ''}>VIP 7 (S6)</option>
+                                                <option value="8" ${u.vip === 8 ? 'selected' : ''}>VIP 8 (S7)</option>
+                                                <option value="9" ${u.vip === 9 ? 'selected' : ''}>VIP 9 (S8)</option>
+                                                <option value="10" ${u.vip === 10 ? 'selected' : ''}>VIP 10 (S9)</option>
+                                                <option value="11" ${u.vip === 11 ? 'selected' : ''}>VIP 11 (S10)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Renderizar inmediatamente la interfaz para evitar la pantalla en blanco
+        render();
+        // Iniciar la carga de Supabase de forma asíncrona en segundo plano
+        loadDataFromSupabase();
+    </script>
+</body>
+</html>
