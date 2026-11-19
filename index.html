@@ -638,60 +638,49 @@
             if (!user) return;
             const currentTasksBal = getWithdrawableBalance(user);
             if (action === 'add') {
-                user.balance += val;
+                user.balance = parseFloat((user.balance + val).toFixed(2));
                 user.taskBalance = currentTasksBal;
+                const nuevoVip = calculateVipFromAmount(user.balance);
+                if (nuevoVip > user.vip) {
+                    user.vip = nuevoVip;
+                    user.hasDeposited = true;
+                }
             } else {
-                user.balance = Math.max(0, user.balance - val);
+                user.balance = Math.max(0, parseFloat((user.balance - val).toFixed(2)));
                 user.taskBalance = Math.min(currentTasksBal, user.balance);
             }
             input.value = '';
-            persistState();
+            const idx = AppState.users.findIndex(u => u.id === user.id);
+            if (idx !== -1) AppState.users[idx] = user;
+            if (AppState.currentUser && AppState.currentUser.id === user.id) {
+                AppState.currentUser = user;
+            }
+            localStorage.setItem('zentra_v6_users', JSON.stringify(AppState.users));
+            if (AppState.currentUser) {
+                localStorage.setItem('zentra_current_user', JSON.stringify(AppState.currentUser));
+            }
+            syncUserToSupabase(user);
             render();
+            showToast(AppState.lang === 'es' ? 'Saldo y nivel VIP actualizados.' : 'Balance and VIP level updated.');
         }
         function adminChangeVip(userId, newVip) {
             const user = AppState.users.find(u => u.id === userId);
             if (!user) return;
-            user.vip = parseInt(newVip);
+            user.vip = parseInt(newVip, 10);
             if (user.vip > 0) user.hasDeposited = true;
-            persistState();
-            render();
-        }
-
-        // FUNCIONES DE ELIMINACIÓN (ADMIN)
-        async function eliminarUsuario(userId) {
-            const userToDelete = AppState.users.find(u => u.id === userId);
-            if (userToDelete && userToDelete.role === 'admin') {
-                return showToast("No se puede eliminar al administrador principal.", false);
+            const idx = AppState.users.findIndex(u => u.id === user.id);
+            if (idx !== -1) AppState.users[idx] = user;
+            if (AppState.currentUser && AppState.currentUser.id === user.id) {
+                AppState.currentUser = user;
             }
-            if (!confirm("¿Estás seguro de que deseas eliminar este usuario?")) return;
-            if (supabaseClient && userToDelete) {
-                try {
-                    await supabaseClient.from('profiles').delete().eq('email', userToDelete.email);
-                } catch (e) {
-                    console.error("Error al eliminar en Supabase:", e);
-                }
+            localStorage.setItem('zentra_v6_users', JSON.stringify(AppState.users));
+            if (AppState.currentUser) {
+                localStorage.setItem('zentra_current_user', JSON.stringify(AppState.currentUser));
             }
-            AppState.users = AppState.users.filter(u => u.id !== userId);
-            persistState();
-            showToast("Usuario eliminado correctamente.");
+            syncUserToSupabase(user);
             render();
+            showToast(AppState.lang === 'es' ? `Nivel cambiado a VIP ${user.vip}` : `Level changed to VIP ${user.vip}`);
         }
-
-        async function eliminarCapture(depId) {
-            if (!confirm("¿Deseas eliminar este registro de recarga y su comprobante?")) return;
-            if (supabaseClient) {
-                try {
-                    await supabaseClient.from('deposits').delete().eq('id', depId);
-                } catch (e) {
-                    console.error("Error al eliminar recarga en Supabase:", e);
-                }
-            }
-            AppState.deposits = AppState.deposits.filter(d => d.id !== depId);
-            persistState();
-            showToast("Registro de capture eliminado con éxito.");
-            render();
-        }
-
         function openReceiptModal(imgSrc) {
             document.getElementById('receipt-modal-img').src = imgSrc;
             document.getElementById('receipt-modal').classList.remove('hidden');
@@ -997,10 +986,7 @@
                                     </div>
                                     <div class="flex items-center justify-between pt-2 border-t border-slate-100">
                                         <button onclick="openReceiptModal('${dep.receipt}')" class="text-indigo-600 font-extrabold text-[11px] underline"><i class="fa-solid fa-image mr-1"></i> Ver Comprobante Supabase</button>
-                                        <div class="flex items-center gap-2">
-                                            <button onclick="eliminarCapture(${dep.id})" class="bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-xl font-bold text-[10px]">Eliminar</button>
-                                            <span class="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">Sincronizado Online</span>
-                                        </div>
+                                        <span class="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">Sincronizado Online</span>
                                     </div>
                                 </div>
                             `).join('')}
@@ -1038,7 +1024,6 @@
                                             <input type="number" id="admin-bal-input-${u.id}" placeholder="Monto" class="bg-white border border-slate-300 rounded-xl p-1.5 text-xs text-slate-800 w-24 outline-none">
                                             <button onclick="adminUpdateBalance(${u.id}, 'add')" class="bg-indigo-600 text-white px-2.5 py-1 rounded-xl font-bold text-[11px]">+ Sumar</button>
                                             <button onclick="adminUpdateBalance(${u.id}, 'sub')" class="bg-rose-600 text-white px-2.5 py-1 rounded-xl font-bold text-[11px]">- Restar</button>
-                                            ${u.role !== 'admin' ? `<button onclick="eliminarUsuario(${u.id})" class="bg-rose-500 text-white px-2.5 py-1 rounded-xl font-bold text-[11px] ml-auto"><i class="fa-solid fa-trash"></i> Eliminar</button>` : ''}
                                         </div>
                                         <div class="flex items-center gap-2 pt-1">
                                             <span class="text-[10px] text-slate-500 font-bold">Cambiar VIP:</span>
